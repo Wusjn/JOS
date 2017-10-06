@@ -4,12 +4,12 @@
 #include <inc/types.h>
 #include <inc/stdio.h>
 #include <inc/stdarg.h>
-
+extern unsigned wusjcolor;
 
 static void
 putch(int ch, int *cnt)
 {
-	cputchar(ch);
+	cputchar(ch|wusjcolor);
 	*cnt++;
 }
 
@@ -27,7 +27,7 @@ cprintf(const char *fmt, ...)
 {
 	va_list ap;
 	int cnt;
-
+	wusjcolor=0;
 	va_start(ap, fmt);
 	cnt = vcprintf(fmt, ap);
 	va_end(ap);
