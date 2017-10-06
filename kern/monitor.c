@@ -7,6 +7,7 @@
 #include <inc/assert.h>
 #include <inc/x86.h>
 
+#include <kern/pmap.h>
 #include <kern/console.h>
 #include <kern/monitor.h>
 #include <kern/kdebug.h>
@@ -24,7 +25,10 @@ struct Command {
 static struct Command commands[] = {
 	{ "help", "Display this list of commands", mon_help },
 	{ "kerninfo", "Display information about the kernel", mon_kerninfo },
-	{"backtrace","Display information about the calling trace",mon_backtrace}
+	{"backtrace","Display information about the calling trace",mon_backtrace},
+	{"showmappings","Display mapping information",mon_showmappings},
+	{"setperm","Change map perms",mon_setperm},
+	{"memdump","Display memory",mon_memdump}
 };
 
 /***** Implementations of basic kernel monitor commands *****/
@@ -55,7 +59,101 @@ mon_kerninfo(int argc, char **argv, struct Trapframe *tf)
 	return 0;
 }
 
+uint32_t
+xtou(char *buf){
+	uint32_t num=0;
+	buf+=2;
+	while(*buf){
+		if(*buf>='a') num=num*16+(*buf-'a'+10);
+		else num=num*16+(*buf-'0');
+		buf++;
+	}
+	return num;
+}
 
+void pteprint(pte_t *cpte){
+	cprintf("%x with perm PTE_P %d PTE_W %d PTE_U %d\n",PTE_ADDR(*cpte),
+			((*cpte)&PTE_P)==PTE_P,((*cpte)&PTE_W)==PTE_W,((*cpte)&PTE_U)==PTE_U);
+}
+
+int
+mon_showmappings(int argc, char **argv, struct Trapframe *tf){
+	if(argc!=3){
+		cprintf("usage: showmappngs [vaddr begin] [vaddr end]\n");
+		return 0;
+	}
+	uint32_t begin=ROUNDDOWN(xtou(argv[1]),PGSIZE);
+	uint32_t end=ROUNDUP(xtou(argv[2]),PGSIZE);
+	pte_t *cpte;
+	uint32_t caddr;
+	cprintf("begin : %x	end : %x\n",begin,end);
+	for(caddr=begin;caddr<=end;caddr+=PGSIZE){
+		cpte=pgdir_walk(kern_pgdir,(void *)caddr,0);
+		if(cpte==NULL){
+			cprintf("page table of vpage %x not mapped\n",caddr);
+			continue;
+		}
+		cprintf("vpage %x at ppage ",caddr);
+		pteprint(cpte);
+	}
+	return 0;
+}
+
+int mon_setperm(int argc, char **argv, struct Trapframe *tf){
+	if(argc!=5){
+		cprintf("usage: setperm [vaddr] [PTE_P] [PTE_W] [PTE_U]\n");
+		return 0;
+	}
+	uint32_t addr=ROUNDDOWN(xtou(argv[1]),PGSIZE);
+	pte_t *cpte;
+	cpte=pgdir_walk(kern_pgdir,(void *)addr,0);
+	if(cpte==NULL){
+		cprintf("page tabel of vpage %x not mapped\n",addr);	
+		return 0;
+	}
+	cprintf("previous:\n");
+	cprintf("vpage %x at ppage ",addr);
+	pteprint(cpte);
+	uint32_t perm=0;
+	if(*argv[2]!='0') perm|=PTE_P;
+	if(*argv[3]!='0') perm|=PTE_W;
+	if(*argv[4]!='0') perm|=PTE_U;
+	*cpte=((*cpte)&(~0x7))|perm;
+	cprintf("now\n");
+	cprintf("vpage %x at ppage ",addr);
+	pteprint(cpte);
+
+	return 0;
+}
+
+void printmem(uint32_t begin,uint32_t end,int paddr){
+	if(paddr){
+		uint32_t pbegin=(uint32_t)KADDR(begin);
+		uint32_t pend=(uint32_t)KADDR(end);
+		for(;pbegin<pend;begin+=4,pbegin+=4){
+			cprintf("PM at %x is %x\n",begin,*(uint32_t *)pbegin);
+		}
+		return;
+	} 
+	for(;begin<end;begin+=4){
+		cprintf("VM at %x is %x\n",begin,*(uint32_t *)begin);
+	}
+	return;
+}
+
+int mon_memdump(int argc, char **argv, struct Trapframe *tf){
+	if(argc!=4){
+		cprintf("usage: memdump [paddr?] [begin] [end]\n");
+		return 0;
+	}
+	uint32_t begin=xtou(argv[2]);
+	uint32_t end=xtou(argv[3]);
+	uint32_t paddr=(*argv[1]=='1');
+	pte_t *cpte;
+	cprintf("begin : %x	end : %x\n",begin,end);
+	printmem(begin,end,paddr);
+	return 0;
+}
 
 int
 mon_backtrace(int argc, char **argv, struct Trapframe *tf)
