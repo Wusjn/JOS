@@ -28,6 +28,9 @@ _start:
 	// because the kernel does not know about passing arguments.
 	pushl $0
 	pushl $0
+	pushl $0
+	pushl $0
+	pushl $0
 
 args_exist:
 	call libmain

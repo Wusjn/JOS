@@ -6,6 +6,7 @@
 #include <inc/memlayout.h>
 #include <inc/assert.h>
 #include <inc/x86.h>
+#include <kern/env.h>
 
 #include <kern/pmap.h>
 #include <kern/console.h>
@@ -29,7 +30,9 @@ static struct Command commands[] = {
 	{"backtrace","Display information about the calling trace",mon_backtrace},
 	{"showmappings","Display mapping information",mon_showmappings},
 	{"setperm","Change map perms",mon_setperm},
-	{"memdump","Display memory",mon_memdump}
+	{"memdump","Display memory",mon_memdump},
+	{"si","step in a env(process)",mon_si},
+	{"c","continue until next breakpoint",mon_c}
 };
 
 /***** Implementations of basic kernel monitor commands *****/
@@ -177,7 +180,25 @@ mon_backtrace(int argc, char **argv, struct Trapframe *tf)
 	return 0;
 }
 
+int
+mon_si(int argc, char **argv, struct Trapframe *tf)
+{
+	if(curenv&&curenv->env_tf.tf_trapno&(T_BRKPT|T_DEBUG)){
+		curenv->env_tf.tf_eflags |=1<<8;
+		return -1;
+	}
+	else return 0;
+}
 
+int
+mon_c(int argc, char **argv, struct Trapframe *tf)
+{
+	if(curenv&&curenv->env_tf.tf_trapno&(T_BRKPT|T_DEBUG)){
+		curenv->env_tf.tf_eflags &=~(1<<8);
+		return -1;
+	}
+	else return 0;
+}
 
 /***** Kernel monitor command interpreter *****/
 
