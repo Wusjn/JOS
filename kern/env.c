@@ -253,7 +253,7 @@ env_alloc(struct Env **newenv_store, envid_t parent_id)
 
 	// Enable interrupts while in user mode.
 	// LAB 4: Your code here.
-
+	e->env_tf.tf_eflags |= FL_IF;
 	// Clear the page fault handler until user installs one.
 	e->env_pgfault_upcall = 0;
 
@@ -350,6 +350,7 @@ load_icode(struct Env *e, uint8_t *binary)
 	//  You must also do something with the program's entry point,
 	//  to make sure that the environment starts executing there.
 	//  What?  (See env_run() and env_pop_tf() below.)
+	// LAB 3: Your code here.
 	struct Elf *elfhdr=(struct Elf*)binary;
 	struct Proghdr *ph,*eph;
 	if(elfhdr->e_magic!=ELF_MAGIC) panic("load_icode: not a elf\n");
@@ -365,8 +366,6 @@ load_icode(struct Env *e, uint8_t *binary)
 		memset((void *)(ph->p_va+ph->p_filesz),0,ph->p_memsz-ph->p_filesz);
 	}
 	e->env_tf.tf_eip=elfhdr->e_entry;
-	// LAB 3: Your code here.
-
 	// Now map one page for the program's initial stack
 	// at virtual address USTACKTOP - PGSIZE.
 
@@ -526,6 +525,7 @@ env_run(struct Env *e)
 	e->env_runs++;
 	lcr3(PADDR(e->env_pgdir));
 	//cprintf("ali is well\n");
+	unlock_kernel();
 	env_pop_tf(&(e->env_tf));
 
 }

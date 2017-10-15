@@ -263,7 +263,9 @@ mem_init_mp(void)
 	//     Permissions: kernel RW, user NONE
 	//
 	// LAB 4: Your code here:
-
+	for(int i=0;i<NCPU;i++){
+		boot_map_region(kern_pgdir,KSTACKTOP-KSTKSIZE-i*(KSTKSIZE+KSTKGAP),KSTKSIZE,PADDR(percpu_kstacks[i]),PTE_P|PTE_W);
+	}
 }
 
 // --------------------------------------------------------------
@@ -306,6 +308,8 @@ page_init(void)
 	size_t ext_free_start=(size_t)PADDR(boot_alloc(0));
 	for (i = 0; i < npages; i++) {
 		if(i==0)
+			pages[i].pp_ref = 1;
+		else if(i==MPENTRY_PADDR/PGSIZE)
 			pages[i].pp_ref = 1;
 		else if(i<npages_basemem)
 			pages[i].pp_ref = 0;
@@ -373,6 +377,9 @@ page_free(struct PageInfo *pp)
 void
 page_decref(struct PageInfo* pp)
 {
+	//add this to avoid memory leak(page2pte need define)
+	//cpte=page2pte(pp);
+	//if (pp->pp_ref==2&&cpte&PTE_COW) cpte=(cpte|PTE_W)&(~PTE_COW);
 	if (--pp->pp_ref == 0)
 		page_free(pp);
 }
@@ -580,7 +587,11 @@ mmio_map_region(physaddr_t pa, size_t size)
 	// Hint: The staff solution uses boot_map_region.
 	//
 	// Your code here:
-	panic("mmio_map_region not implemented");
+	size=ROUNDUP(size,PGSIZE);
+	if(size+base>MMIOLIM||size+base<base) panic("mmio_map_region: out of memory");
+	boot_map_region(kern_pgdir,base,size,pa,PTE_P|PTE_W|PTE_PCD|PTE_PWT);
+	base+=size;
+	return (void *)(base-size);
 }
 
 static uintptr_t user_mem_check_addr;
