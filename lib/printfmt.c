@@ -88,6 +88,7 @@ getint(va_list *ap, int lflag)
 // Main function to format and print a string.
 void printfmt(void (*putch)(int, void*), void *putdat, const char *fmt, ...);
 
+unsigned wusjcolor;
 void
 vprintfmt(void (*putch)(int, void*), void *putdat, const char *fmt, va_list ap)
 {
@@ -154,6 +155,13 @@ vprintfmt(void (*putch)(int, void*), void *putdat, const char *fmt, va_list ap)
 			altflag = 1;
 			goto reswitch;
 
+		case 'C':
+			wusjcolor=(unsigned)(*(unsigned char *) fmt++);
+			if(wusjcolor>'9') wusjcolor=wusjcolor-'a'+10;
+			else wusjcolor-='0';
+			wusjcolor<<=8;
+			break;
+
 		process_precision:
 			if (width < 0)
 				width = precision, precision = -1;
@@ -215,10 +223,9 @@ vprintfmt(void (*putch)(int, void*), void *putdat, const char *fmt, va_list ap)
 		// (unsigned) octal
 		case 'o':
 			// Replace this with your code.
-			putch('X', putdat);
-			putch('X', putdat);
-			putch('X', putdat);
-			break;
+			num = getuint(&ap,lflag);
+			base=8;
+			goto number;
 
 		// pointer
 		case 'p':

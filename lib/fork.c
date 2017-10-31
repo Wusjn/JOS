@@ -25,16 +25,26 @@ pgfault(struct UTrapframe *utf)
 	//   (see <inc/memlayout.h>).
 
 	// LAB 4: Your code here.
-
+	if(!((err&FEC_WR)&&(uvpd[PDX((uint32_t)addr)]&PTE_P)&&((uvpt[PGNUM((uint32_t)addr)]&(PTE_P|PTE_COW))==(PTE_P|PTE_COW)))){
+		//we should cancel this pgfault_handler, and then restart the pgfault_instruction so as to let kernel to destroy it
+		//set_pgfault_handler(NULL);
+		//return
+		panic("pgfault_handler: not COW\n");
+	}
 	// Allocate a new page, map it at a temporary location (PFTEMP),
 	// copy the data from the old page to the new page, then move the new
 	// page to the old page's address.
 	// Hint:
 	//   You should make three system calls.
-
 	// LAB 4: Your code here.
 
-	panic("pgfault not implemented");
+	//ATTENTION: this will cause memory leak because both the fork_env and origin_env will copy the page
+	//we can solve it by add some code in deref(); 
+	addr=(void *)ROUNDDOWN((uint32_t)addr,PGSIZE);
+	if(sys_page_alloc(0,(void *)PFTEMP,PTE_U|PTE_P|PTE_W)<0) panic("pgfault_handler: page alloc failed\n");
+	memcpy((void *)PFTEMP,addr,PGSIZE);
+	if(sys_page_map(0,(void *)PFTEMP,0,addr,PTE_P|PTE_U|PTE_W)<0) panic("pgfault_handler: page map failed\n");
+	if(sys_page_unmap(0,(void *)PFTEMP)<0) panic("pgfaule_handler: page unmap failed\n");
 }
 
 //
@@ -54,7 +64,18 @@ duppage(envid_t envid, unsigned pn)
 	int r;
 
 	// LAB 4: Your code here.
-	panic("duppage not implemented");
+	pte_t cpte;
+	pde_t cpde;
+	void *addr=(void *)(pn*PGSIZE);
+	if(!((cpde=uvpd[PDX((uint32_t)addr)])&PTE_P)) return -1;
+	if(!((cpte=uvpt[pn])&PTE_P)) return -1;
+	if(cpte&(PTE_W|PTE_COW)){
+		if(sys_page_map(0,addr,envid,addr,PTE_P|PTE_U|PTE_COW)<0) panic("duppage: page map failed\n");
+		if(sys_page_map(0,addr,0,addr,PTE_P|PTE_U|PTE_COW)<0) panic("duppage: page map failed\n");
+	}
+	else{
+		if(sys_page_map(0,addr,envid,addr,PTE_P|PTE_U)<0) panic("duppage: page map failed\n");
+	}
 	return 0;
 }
 
@@ -78,7 +99,21 @@ envid_t
 fork(void)
 {
 	// LAB 4: Your code here.
-	panic("fork not implemented");
+	set_pgfault_handler(pgfault);
+	int envid;
+	if((envid=sys_exofork())<0) panic("fork: exofork failed\n");
+	if(envid==0){
+		thisenv=(struct Env *)envs+ENVX(sys_getenvid());
+		return 0;
+	}
+	if(sys_page_alloc(envid,(void *)(UXSTACKTOP-PGSIZE),PTE_P|PTE_U|PTE_W)<0) panic("fork: page alloc failed\n");
+	extern void _pgfault_upcall();
+	if(sys_env_set_pgfault_upcall(envid,_pgfault_upcall)<0) panic("fork: set upcall failed\n");
+	uint32_t addr;
+	for(addr=0;addr<=USTACKTOP;addr+=PGSIZE)
+		duppage(envid,PGNUM(addr));
+	if(sys_env_set_status(envid,ENV_RUNNABLE)<0) panic("fork: set status failed\n");
+	return envid;
 }
 
 // Challenge!

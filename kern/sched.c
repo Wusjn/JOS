@@ -29,7 +29,19 @@ sched_yield(void)
 	// below to halt the cpu.
 
 	// LAB 4: Your code here.
-
+	int start=0;
+	idle=thiscpu->cpu_env;
+	struct Env *runEnv=NULL;
+	if(idle!=NULL)	start=ENVX(idle->env_id);
+	for(int i=0;i<NENV;i++){
+		int j=(start+i)%NENV;
+		if(envs[j].env_status==ENV_RUNNABLE){
+			runEnv=&envs[j];break;
+		}
+	}
+	if(runEnv!=NULL) {env_run(runEnv);return;}
+	if(thiscpu->cpu_env&&thiscpu->cpu_env->env_status==ENV_RUNNING) {env_run(thiscpu->cpu_env);return;}
+	//cprintf("what happened?\n");
 	// sched_halt never returns
 	sched_halt();
 }
@@ -75,7 +87,7 @@ sched_halt(void)
 		"pushl $0\n"
 		"pushl $0\n"
 		// Uncomment the following line after completing exercise 13
-		//"sti\n"
+		"sti\n"
 		"1:\n"
 		"hlt\n"
 		"jmp 1b\n"
