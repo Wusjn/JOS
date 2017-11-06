@@ -29,7 +29,7 @@ pgfault(struct UTrapframe *utf)
 		//we should cancel this pgfault_handler, and then restart the pgfault_instruction so as to let kernel to destroy it
 		//set_pgfault_handler(NULL);
 		//return
-		panic("pgfault_handler: not COW\n");
+		panic("pgfault_handler: not COW%x %x %d %d\n",(uint32_t)addr,utf->utf_eip,err&FEC_WR,utf->utf_regs.reg_eax);
 	}
 	// Allocate a new page, map it at a temporary location (PFTEMP),
 	// copy the data from the old page to the new page, then move the new
@@ -69,12 +69,17 @@ duppage(envid_t envid, unsigned pn)
 	void *addr=(void *)(pn*PGSIZE);
 	if(!((cpde=uvpd[PDX((uint32_t)addr)])&PTE_P)) return -1;
 	if(!((cpte=uvpt[pn])&PTE_P)) return -1;
-	if(cpte&(PTE_W|PTE_COW)){
-		if(sys_page_map(0,addr,envid,addr,PTE_P|PTE_U|PTE_COW)<0) panic("duppage: page map failed\n");
-		if(sys_page_map(0,addr,0,addr,PTE_P|PTE_U|PTE_COW)<0) panic("duppage: page map failed\n");
+	if(cpte&PTE_SHARE){
+		if(sys_page_map(0,addr,envid,addr,cpte&PTE_SYSCALL)<0) panic("duppage: page map failed\n");
 	}
 	else{
-		if(sys_page_map(0,addr,envid,addr,PTE_P|PTE_U)<0) panic("duppage: page map failed\n");
+		if(cpte&(PTE_W|PTE_COW)){
+			if(sys_page_map(0,addr,envid,addr,PTE_P|PTE_U|PTE_COW)<0) panic("duppage: page map failed\n");
+			if(sys_page_map(0,addr,0,addr,PTE_P|PTE_U|PTE_COW)<0) panic("duppage: page map failed\n");
+		}
+		else{
+			if(sys_page_map(0,addr,envid,addr,PTE_P|PTE_U)<0) panic("duppage: page map failed\n");
+		}
 	}
 	return 0;
 }

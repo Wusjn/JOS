@@ -252,6 +252,7 @@ trap_dispatch(struct Trapframe *tf)
 	// Handle processor exceptions.
 	// LAB 3: Your code here.
 
+
 	switch(tf->tf_trapno){
 	case T_PGFLT:
 		page_fault_handler(tf);
@@ -263,9 +264,15 @@ trap_dispatch(struct Trapframe *tf)
 	case T_SYSCALL:
 		tf->tf_regs.reg_eax=syscall(tf->tf_regs.reg_eax,tf->tf_regs.reg_edx,tf->tf_regs.reg_ecx,tf->tf_regs.reg_ebx,tf->tf_regs.reg_edi,tf->tf_regs.reg_esi);
 		return;
-	case IRQ_OFFSET+0:
+	case IRQ_OFFSET+IRQ_TIMER:
 		lapic_eoi();
 		sched_yield();
+		return;
+	case IRQ_OFFSET+IRQ_KBD:
+		kbd_intr();
+		return;
+	case IRQ_OFFSET+IRQ_SERIAL:
+		serial_intr();
 		return;
 	default:break;
 	}	
@@ -301,6 +308,7 @@ trap(struct Trapframe *tf)
 	// The environment may have set DF and some versions
 	// of GCC rely on DF being clear
 	asm volatile("cld" ::: "cc");
+	
 
 	// Halt the CPU if some other CPU has called panic()
 	extern char *panicstr;
@@ -343,6 +351,7 @@ trap(struct Trapframe *tf)
 	last_tf = tf;
 
 	// Dispatch based on what type of trap occurred
+	
 	trap_dispatch(tf);
 
 	// If we made it to this point, then no other environment was
@@ -359,6 +368,11 @@ void
 page_fault_handler(struct Trapframe *tf)
 {
 	uint32_t fault_va;
+	if(tf->tf_eip==0) {
+		print_trapframe(tf);
+		cprintf("%d,%d,%d,%d\n",curenv->env_status,curenv->env_type,curenv->env_id,curenv->env_parent_id);
+		panic("eip==0\n");
+	}
 
 	// Read processor's CR2 register to find the faulting address
 	fault_va = rcr2();

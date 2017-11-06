@@ -117,7 +117,7 @@ sys_env_set_status(envid_t envid, int status)
 
 // Set envid's trap frame to 'tf'.
 // tf is modified to make sure that user environments always run at code
-// protection level 3 (CPL 3), interrupts enabled, and IOPL of 0.
+// protection level 3 (CPL 3), interrupts enabled, and IOPL of 0.m
 //
 // Returns 0 on success, < 0 on error.  Errors are:
 //	-E_BAD_ENV if environment envid doesn't currently exist,
@@ -128,7 +128,18 @@ sys_env_set_trapframe(envid_t envid, struct Trapframe *tf)
 	// LAB 5: Your code here.
 	// Remember to check whether the user has supplied us with a good
 	// address!
-	panic("sys_env_set_trapframe not implemented");
+	struct Env *tar_env;
+	int r;
+	if((r=envid2env(envid,&tar_env,1))<0)
+		return r;
+	user_mem_assert(tar_env,tf,sizeof(struct Trapframe),0);
+	if(tar_env->env_status==ENV_FREE)
+		return -1;
+	tar_env->env_tf=*tf;
+	tar_env->env_tf.tf_cs|=3;
+	tar_env->env_tf.tf_eflags|=FL_IF;
+	tar_env->env_tf.tf_eflags&=~(FL_IOPL_MASK);
+	return 0;
 }
 
 // Set the page fault upcall for 'envid' by modifying the corresponding struct
@@ -354,7 +365,6 @@ syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, 
 	// Return any appropriate return value.
 	// LAB 3: Your code here.
 
-
 	int ret=0;
 	switch (syscallno) {
 	case(SYS_cputs):
@@ -395,6 +405,9 @@ syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, 
 		break;
 	case(SYS_ipc_try_send):
 		ret=sys_ipc_try_send(a1,a2,(void *)a3,a4);
+		break;
+	case(SYS_env_set_trapframe):
+		ret=sys_env_set_trapframe(a1,(void *)a2);
 		break;
 	default:
 		return -E_INVAL;
