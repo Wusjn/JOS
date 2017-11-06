@@ -405,7 +405,7 @@ env_free(struct Env *e)
 	pte_t *pt;
 	uint32_t pdeno, pteno;
 	physaddr_t pa;
-
+	
 	// If freeing the current environment, switch to kern_pgdir
 	// before freeing the page directory, just in case the page
 	// gets reused.

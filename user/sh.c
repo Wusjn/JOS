@@ -1,7 +1,7 @@
 #include <inc/lib.h>
 
 #define BUFSIZ 1024		/* Find the buffer overrun bug! */
-int debug = 1;
+int debug = 0;
 
 
 // gettoken(s, 0) prepares gettoken for subsequent calls and returns 0.
@@ -100,6 +100,7 @@ again:
 				close(p[1]);
 				goto again;
 			} else {
+
 				pipe_child = r;
 				if (p[1] != 1) {
 					dup(p[1], 1);

@@ -190,7 +190,7 @@ sys_page_alloc(envid_t envid, void *va, int perm)
 	// LAB 4: Your code here.
 	if((int)va%PGSIZE!=0||(int)va>=UTOP) return -E_INVAL;
 	if((perm&(PTE_P|PTE_U))!=(PTE_P|PTE_U)) return -E_INVAL;
-	if((perm&(~(PTE_P|PTE_U|PTE_W|PTE_AVAIL)))!=0) return -E_INVAL;
+	if(perm&(~PTE_SYSCALL)) return -E_INVAL;
 	struct Env *tarenv;
 	int success;
 	if((success=envid2env(envid,&tarenv,1))<0) return success;
@@ -237,7 +237,7 @@ sys_page_map(envid_t srcenvid, void *srcva,
 	if((success=envid2env(dstenvid,&denv,1))<0) return success;
 	if((int)srcva>=UTOP||(int)dstva>=UTOP||(int)srcva%PGSIZE!=0||(int)dstva%PGSIZE!=0) return -E_INVAL;
 	if((perm&(PTE_P|PTE_U))!=(PTE_P|PTE_U)) return -E_INVAL;
-	if((perm&(~(PTE_W|PTE_AVAIL|PTE_P|PTE_U)))) return -E_INVAL;
+	if(perm&(~PTE_SYSCALL)) return -E_INVAL;
 	struct PageInfo *tarpage;
 	pte_t *tarpte;
 	if((tarpage=page_lookup(senv->env_pgdir,srcva,&tarpte))==NULL) return -E_INVAL;
