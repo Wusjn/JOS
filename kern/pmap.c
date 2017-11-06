@@ -487,7 +487,10 @@ page_insert(pde_t *pgdir, struct PageInfo *pp, void *va, int perm)
 	cpte=pgdir_walk(pgdir,va,1);
 	if(cpte==NULL) return -E_NO_MEM;
 	pp->pp_ref++;
-	if(*cpte!=0) page_remove(pgdir,va);
+	if(*cpte&PTE_P){
+		page_remove(pgdir,va);
+		tlb_invalidate(pgdir, va);
+	}
 	*cpte=page2pa(pp)|perm|PTE_P;
 	return 0;
 }
@@ -510,6 +513,7 @@ page_lookup(pde_t *pgdir, void *va, pte_t **pte_store)
 	pte_t *cpte;
 	cpte=pgdir_walk(pgdir,va,0);
 	if(cpte==NULL) return NULL;
+	if(!(*cpte&PTE_P)) return NULL;
 	if(pte_store!=NULL) *pte_store=cpte;
 	return pa2page(PTE_ADDR(*cpte));
 }
