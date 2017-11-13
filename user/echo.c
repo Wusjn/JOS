@@ -11,11 +11,13 @@ umain(int argc, char **argv)
 		argc--;
 		argv++;
 	}
+
 	for (i = 1; i < argc; i++) {
 		if (i > 1)
 			write(1, " ", 1);
 		write(1, argv[i], strlen(argv[i]));
 	}
+
 	if (!nflag)
 		write(1, "\n", 1);
 }

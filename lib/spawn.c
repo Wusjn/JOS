@@ -27,7 +27,6 @@ spawn(const char *prog, const char **argv)
 	struct Elf *elf;
 	struct Proghdr *ph;
 	int perm;
-
 	// This code follows this procedure:
 	//
 	//   - Open the program file.
@@ -302,6 +301,19 @@ static int
 copy_shared_pages(envid_t child)
 {
 	// LAB 5: Your code here.
+	uint32_t addr;
+	int r;
+	unsigned pn;
+	for(addr=0;addr<=USTACKTOP;addr+=PGSIZE){
+		pn=PGNUM(addr);
+		pte_t cpte;
+		pde_t cpde;
+		if(!((cpde=uvpd[PDX(addr)])&PTE_P)) continue;
+		if(!((cpte=uvpt[pn])&PTE_P)) continue;
+		if(cpte&PTE_SHARE){
+			if(sys_page_map(0,(void *)addr,child,(void *)addr,cpte&PTE_SYSCALL)<0) panic("copy_shared_pages: page map failed\n");
+		}
+	}
 	return 0;
 }
 
