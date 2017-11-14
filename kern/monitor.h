@@ -1,3 +1,4 @@
+#include <kern/e1000.h>
 #ifndef JOS_KERN_MONITOR_H
 #define JOS_KERN_MONITOR_H
 #ifndef JOS_KERNEL
@@ -21,5 +22,6 @@ int mon_setperm(int argc, char **argv, struct Trapframe *tf);
 int mon_memdump(int argc, char **argv, struct Trapframe *tf);
 int mon_si(int argc, char **argv, struct Trapframe *tf);
 int mon_c(int argc, char **argv, struct Trapframe *tf);
+int mon_transmit(int argc, char **argv, struct Trapframe *tf);
 
 #endif	// !JOS_KERN_MONITOR_H

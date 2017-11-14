@@ -122,3 +122,13 @@ sys_time_msec(void)
 {
 	return (unsigned int) syscall(SYS_time_msec, 0, 0, 0, 0, 0, 0);
 }
+
+int
+sys_packet_try_send(char *addr,uint32_t size){
+	return syscall(SYS_packet_try_send,0,(uint32_t)addr,size,0,0,0);
+}
+
+int
+sys_packet_try_recv(char *addr,uint32_t size){
+	return syscall(SYS_packet_try_recv,0,(uint32_t)addr,size,0,0,0);
+}

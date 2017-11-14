@@ -32,7 +32,8 @@ static struct Command commands[] = {
 	{"setperm","Change map perms",mon_setperm},
 	{"memdump","Display memory",mon_memdump},
 	{"si","step in a env(process)",mon_si},
-	{"c","continue until next breakpoint",mon_c}
+	{"c","continue until next breakpoint",mon_c},
+	{"transmit","transmit a packet",mon_transmit}
 };
 
 /***** Implementations of basic kernel monitor commands *****/
@@ -198,6 +199,13 @@ mon_c(int argc, char **argv, struct Trapframe *tf)
 		return -1;
 	}
 	else return 0;
+}
+
+int
+mon_transmit(int argc, char **argv, struct Trapframe *tf)
+{
+	char *addr=(char *)tf;
+	return e1000_transmit(addr,sizeof(struct Trapframe));
 }
 
 /***** Kernel monitor command interpreter *****/

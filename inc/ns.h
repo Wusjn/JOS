@@ -6,6 +6,7 @@
 #include <inc/types.h>
 #include <inc/mmu.h>
 #include <lwip/sockets.h>
+#include <inc/lib.h>
 
 struct jif_pkt {
 	int jp_len;
