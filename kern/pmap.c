@@ -369,8 +369,8 @@ pgdir_walk(pde_t *pgdir, const void *va, int create)
 		}
 		else return NULL;
 	}
-	cpte=(pte_t *)PTE_ADDR(*cpde)+PTX(va);
-	return (pte_t *)KADDR((physaddr_t)cpte);
+	cpte=(pte_t *)KADDR(PTE_ADDR(*cpde))+PTX(va);
+	return cpte;
 }
 
 //
