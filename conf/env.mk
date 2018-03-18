@@ -17,4 +17,4 @@ V = @
 # If the makefile cannot find your QEMU binary, uncomment the
 # following line and set it to the full path to QEMU.
 #
- QEMU=/home/wusj/wusjvm/bin/qemu-system-i386
+ QEMU=/home/wusj/qemu-i386/bin/qemu-system-i386
