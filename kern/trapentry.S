@@ -92,12 +92,16 @@ _alltraps:
 	pushl %ds
 	pushl %es
 	pushal
+	subl $524,%esp
+	FXSAVE (%esp)
 	movl $GD_KD,%eax
 	movl %eax,%es
 	movl %eax,%ds
 	pushl %esp
 	call trap
 	addl $4,%esp
+	FXRSTOR (%esp)
+	addl $524,%esp
 	popal
 	popl %es
 	popl %ds
