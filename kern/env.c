@@ -249,6 +249,7 @@ env_alloc(struct Env **newenv_store, envid_t parent_id)
 	e->env_tf.tf_ss = GD_UD | 3;
 	e->env_tf.tf_esp = USTACKTOP;
 	e->env_tf.tf_cs = GD_UT | 3;
+	memset(e->env_tf.fp_registers,0,524);
 	// You will set e->env_tf.tf_eip later.
 
 	// Enable interrupts while in user mode.
@@ -485,6 +486,8 @@ env_pop_tf(struct Trapframe *tf)
 
 	asm volatile(
 		"\tmovl %0,%%esp\n"
+		"\tfxrstor (%%esp)\n"
+		"\taddl $524,%%esp\n"
 		"\tpopal\n"
 		"\tpopl %%es\n"
 		"\tpopl %%ds\n"
