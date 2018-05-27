@@ -24,6 +24,72 @@ va_is_dirty(void *va)
 	return (uvpt[PGNUM(va)] & PTE_D) != 0;
 }
 
+
+//Wusj modified
+#define MAXBLOCKS_ 10
+struct blocks_
+{
+	void * blkaddr;
+	struct blocks_ * next;
+};
+static struct blocks_ all_blocks[MAXBLOCKS_];
+static struct blocks_ * blkfreelist = NULL;
+
+static bool not_accessed(void *addr){
+	if(uvpt[PGNUM(addr)] & PTE_A){
+		return false;
+	}
+	return true;
+}
+static void blk_clear(void *addr){
+	flush_block(addr);
+	sys_page_unmap(0,addr);
+}
+static void blks_clear(){
+	int count = 0;
+	if(blkfreelist!=NULL){
+		panic("free blocks remain!");
+	}
+	for (int i = 0; i < MAXBLOCKS_; ++i)
+	{
+		if(not_accessed(all_blocks[i].blkaddr)){
+			blk_clear(all_blocks[i].blkaddr);
+			all_blocks[i].next = blkfreelist;
+			all_blocks[i].blkaddr = 0;
+			blkfreelist = &all_blocks[i];
+			count++;
+			cprintf("a page get out\n");
+		}
+	}
+	if(count<MAXBLOCKS_/5){
+		for (int i = MAXBLOCKS_-1; i >=0; --i)
+		{
+			if(all_blocks[i].blkaddr != 0){
+				blk_clear(all_blocks[i].blkaddr);
+				all_blocks[i].next = blkfreelist;
+				all_blocks[i].blkaddr = 0;
+				blkfreelist = &all_blocks[i];
+				count++;
+				cprintf("a page get out\n");
+
+			}
+			if(count>=MAXBLOCKS_/5)
+				break;
+		}
+	}
+}
+
+void init_blkfreelist(){
+	for (int i = 0; i < MAXBLOCKS_ - 1; ++i)
+	{
+		all_blocks[i].next = &all_blocks[i+1];
+		all_blocks[i].blkaddr = 0;
+	}
+	all_blocks[MAXBLOCKS_-1].next = NULL;
+	all_blocks[MAXBLOCKS_-1].blkaddr = 0;
+	blkfreelist = &all_blocks[0];
+}
+
 // Fault any disk block that is read in to memory by
 // loading it from disk.
 static void
@@ -54,6 +120,21 @@ bc_pgfault(struct UTrapframe *utf)
 	if((r=ide_read(blockno*BLKSECTS,addr,BLKSECTS))<0)
 		panic("in bc_pgfault, sys_page_read: %e",r);
 
+	
+	if(blkfreelist==NULL){
+		blks_clear();
+		cprintf("clear\n");
+	}
+	if(blkfreelist!=NULL){
+		blkfreelist->blkaddr = addr;
+		blkfreelist = blkfreelist->next;
+		cprintf("a page get in\n");
+
+	}
+	else{
+		panic("blks_clear failed!");
+	}
+	
 	// Clear the dirty bit for the disk block page since we just read the
 	// block from disk
 	if ((r = sys_page_map(0, addr, 0, addr, uvpt[PGNUM(addr)] & PTE_SYSCALL)) < 0)
@@ -116,6 +197,7 @@ check_bc(void)
 	assert(!va_is_mapped(diskaddr(1)));
 
 	// read it back in
+	cprintf("%s\n",diskaddr(1));
 	assert(strcmp(diskaddr(1), "OOPS!\n") == 0);
 
 	// fix it

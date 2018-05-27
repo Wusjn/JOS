@@ -270,6 +270,7 @@ trap_dispatch(struct Trapframe *tf)
 		return;
 	case IRQ_OFFSET+IRQ_KBD:
 		kbd_intr();
+		//cprintf("kbd_intr!\n");
 		return;
 	case IRQ_OFFSET+IRQ_SERIAL:
 		serial_intr();
