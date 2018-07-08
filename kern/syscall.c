@@ -328,7 +328,7 @@ sys_ipc_try_send(envid_t envid, uint32_t value, void *srcva, unsigned perm)
 	tarenv->env_ipc_recving=0;
 	tarenv->env_ipc_from=curenv->env_id;
 	tarenv->env_ipc_value=value;
-	tarenv->env_status=ENV_RUNNABLE;
+	tarenv->env_status=ENV_RUN_INSTANTLY;
 	tarenv->env_tf.tf_regs.reg_eax=0;
 	return 0;
 }
