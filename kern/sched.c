@@ -35,12 +35,7 @@ sched_yield(void)
 	if(idle!=NULL)	start=ENVX(idle->env_id);
 	for(int i=0;i<NENV;i++){
 		int j=(start+i)%NENV;
-		if(envs[j].env_status==ENV_RUN_INSTANTLY){
-			cprintf("process runs instantly\n");
-			runEnv=&envs[j];break;
-			//panic("process runs instantly\n");
-		}
-		else if(envs[j].env_status==ENV_RUNNABLE){
+		if(envs[j].env_status==ENV_RUNNABLE){
 			runEnv=&envs[j];break;
 		}
 	}

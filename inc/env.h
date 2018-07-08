@@ -36,7 +36,6 @@ enum {
 	ENV_RUNNABLE,
 	ENV_RUNNING,
 	ENV_NOT_RUNNABLE,
-	ENV_RUN_INSTANTLY
 };
 
 // Special environment types
